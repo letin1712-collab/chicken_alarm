@@ -8,11 +8,11 @@
 #include "GithubOTA.h"
 
 // --- Cấu hình Github OTA ---
-#define FIRMWARE_VERSION "1.0.0"
-#define OTA_VERSION_URL "https://raw.githubusercontent.com/letin1712-collab/chicken_alarm/main/version.txt" 
-#define OTA_FIRMWARE_URL "https://raw.githubusercontent.com/letin1712-collab/chicken_alarm/main/firmware.bin"
+#define FIRMWARE_VERSION "1.0.1"
+#define OTA_VERSION_URL "https://raw.githubusercontent.com/letin1712-collab/chicken_alarm/refs/heads/main/version.txt?token=GHSAT0AAAAAAEGVXY6EKBYDTLJO6MYHKIRK2V4YHLQ" 
+#define OTA_FIRMWARE_URL "https://github.com/letin1712-collab/chicken_alarm/releases/download/latest/firmware.bin"
 // Nếu dùng Private Repository, hãy điền Github PAT (Personal Access Token) vào đây.
-#define GITHUB_TOKEN "" // Ví dụ: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxx"
+#define GITHUB_TOKEN "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" // Ví dụ: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 constexpr uint8_t DF_RX_PIN = 16;
 constexpr uint8_t DF_TX_PIN = 17;
