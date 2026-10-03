@@ -9,16 +9,16 @@
 
 // --- Cấu hình Github OTA ---
 #define FIRMWARE_VERSION "1.0.1"
-#define OTA_VERSION_URL "https://raw.githubusercontent.com/letin1712-collab/chicken_alarm/refs/heads/main/version.txt?token=GHSAT0AAAAAAEGVXY6EKBYDTLJO6MYHKIRK2V4YHLQ" 
-#define OTA_FIRMWARE_URL "https://github.com/letin1712-collab/chicken_alarm/releases/download/latest/firmware.bin"
-// Nếu dùng Private Repository, hãy điền Github PAT (Personal Access Token) vào đây.
-#define GITHUB_TOKEN "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" // Ví dụ: "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxx"
+#define OTA_VERSION_URL "https://raw.githubusercontent.com/letin1712-collab/chicken_alarm/main/version.txt"
+#define OTA_FIRMWARE_URL "https://github.com/letin1712-collab/chicken_alarm/releases/latest/download/firmware.bin"
+// Repo PUBLIC nên không cần token. Để trống "" (KHÔNG dán token vào code).
+#define GITHUB_TOKEN ""
 
 constexpr uint8_t DF_RX_PIN = 16;
 constexpr uint8_t DF_TX_PIN = 17;
 constexpr uint8_t DEFAULT_VOLUME = 20;
-constexpr uint16_t DEFAULT_DURATION_MIN = 1;
-constexpr uint16_t MAX_DURATION_MIN = 120;
+constexpr uint16_t DEFAULT_DURATION_SEC = 60;
+constexpr uint16_t MAX_DURATION_SEC = 7200;
 constexpr long GMT_OFFSET_SEC = 7 * 3600;
 constexpr uint32_t WIFI_TIMEOUT_MS = 15000;
 
@@ -30,7 +30,7 @@ struct AlarmConfig {
   bool enabled;
   uint8_t hour;
   uint8_t minute;
-  uint16_t durationMin;
+  uint16_t durationSec;
   uint8_t volume;
 };
 
@@ -67,25 +67,24 @@ const char PAGE[] PROGMEM = R"HTML(
 :root{font:16px system-ui,sans-serif;color:#17202a;background:#f3f6f5}*{box-sizing:border-box}body{margin:0 auto;max-width:720px;padding:16px}header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ccd5d2;padding:8px 0 14px}h1{font-size:22px;margin:0}section{padding:16px 0;border-bottom:1px solid #ccd5d2}h2{font-size:17px;margin:0 0 12px}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:grid;gap:5px;color:#45534f;font-size:14px}input,select,button{font:inherit;min-height:42px;border:1px solid #aebbb6;border-radius:5px;padding:8px 10px;background:white;color:#17202a}input[type=checkbox]{min-height:0;width:20px;height:20px;accent-color:#087f68}button{cursor:pointer;font-weight:600;background:#087f68;color:white;border-color:#087f68}button.secondary{background:#fff;color:#17202a;border-color:#aebbb6}button.danger{background:#a33d32;border-color:#a33d32}.status{font-size:14px;color:#45534f}.note{font-size:13px;line-height:1.5;color:#596963}.wide{width:100%}.alarm-list{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}.alarm-item{border:1px solid #ccd5d2;border-radius:5px;padding:12px;background:#f9fbfa}.alarm-time{font-weight:600;font-size:18px;color:#087f68}.alarm-meta{font-size:13px;color:#596963;margin-top:4px}@media(max-width:480px){body{padding:12px}.grid{grid-template-columns:1fr}}
 </style></head><body>
 <header><h1>Báo thức ESP32</h1><span id="clock" class="status">Đang tải giờ…</span></header>
-<section><h2>Danh sách báo thức</h2><div id="alarmsList" class="alarm-list">Đang tải...</div><div class="grid"><label>Giờ<input id="hour" type="number" min="0" max="23"></label><label>Phút<input id="minute" type="number" min="0" max="59"></label><label>Thời lượng (phút)<input id="duration" type="number" min="1" max="120"></label><label>Âm lượng (0–30)<input id="volume" type="number" min="0" max="30"></label></div><p class="note">Mỗi lần báo thức bắt đầu, hệ thống chọn ngẫu nhiên một bài trong thẻ nhớ và đổi bài ngẫu nhiên khi phát lặp.</p><div class="row"><button id="saveAlarmButton" onclick="saveAlarm()">Thêm báo thức</button><button class="secondary" onclick="cancelEdit()">Làm mới</button></div><div class="row" style="margin-top:12px"><label>Bài kiểm tra<select id="track"></select></label><button class="secondary" onclick="testTrack()">Phát thử</button><button class="danger" onclick="stopAudio()">Dừng phát</button></div></section>
-<section><h2>Kết nối Wi‑Fi</h2><p class="status" id="wifiStatus">Đang kiểm tra…</p><div class="grid"><label>Tên Wi‑Fi<input id="ssid" autocomplete="username"></label><label>Mật khẩu Wi‑Fi<input id="password" type="password" autocomplete="new-password"></label></div><p><button class="secondary" onclick="saveWifi()">Lưu Wi‑Fi</button> <button class="secondary" onclick="rescan()">Quét lại số bài</button> <button class="secondary" onclick="ota()">Cập nhật OTA</button></p><p class="note">Nếu ESP32 chưa vào Wi‑Fi, kết nối điện thoại với mạng 192.168.4.1. Cần Internet để tự đồng bộ giờ NTP.</p></section>
+<section><h2>Danh sách báo thức</h2><div id="alarmsList" class="alarm-list">Đang tải...</div><div class="grid"><label>Giờ<input id="hour" type="number" min="0" max="23"></label><label>Phút<input id="minute" type="number" min="0" max="59"></label><label>Thời lượng (giây)<input id="duration" type="number" min="1" max="7200"></label><label>Âm lượng (0–30)<input id="volume" type="number" min="0" max="30"></label></div><p class="note">Mỗi lần báo thức bắt đầu, hệ thống chọn ngẫu nhiên một bài trong thẻ nhớ và đổi bài ngẫu nhiên khi phát lặp.</p><div class="row"><button id="saveAlarmButton" onclick="saveAlarm()">Thêm báo thức</button><button class="secondary" onclick="cancelEdit()">Làm mới</button></div><div class="row" style="margin-top:12px"><label>Bài kiểm tra<select id="track"></select></label><button class="secondary" onclick="testTrack()">Phát thử</button><button class="danger" onclick="stopAudio()">Dừng phát</button></div></section>
+<section><h2>Kết nối Wi‑Fi</h2><p class="status" id="wifiStatus">Đang kiểm tra…</p><div class="grid"><label>Tên Wi‑Fi<input id="ssid" autocomplete="username"></label><label>Mật khẩu Wi‑Fi<input id="password" type="password" autocomplete="new-password"></label></div><p><button class="secondary" onclick="saveWifi()">Lưu Wi‑Fi</button> <button class="secondary" onclick="rescan()">Quét lại số bài</button></p><p class="note">Nếu ESP32 chưa vào Wi‑Fi, kết nối điện thoại với mạng 192.168.4.1. Cần Internet để tự đồng bộ giờ NTP.</p></section>
 <section><h2>Thẻ nhớ</h2><p class="note" id="cardNote">Đang đọc trạng thái thẻ…</p><p class="note">Có thể đặt file tên liên tục 0001.mp3, 0002.mp3… trong thư mục MP3 hoặc ngay gốc thẻ. Firmware thử cả hai kiểu phát. Thẻ nên định dạng FAT32. Nếu phát không được, kiểm tra Serial Monitor để xem đường dẫn nào lỗi. DFPlayer không hỗ trợ tải lên hoặc xóa file qua UART.</p></section>
 <script>
 const $=id=>document.getElementById(id);
 async function api(path,options={}){const r=await fetch(path,{headers:{'Content-Type':'application/json'},...options});const j=await r.json();if(!r.ok)throw Error(j.error||'Có lỗi');return j}
 function showError(e){alert(e.message||e)}
-async function ota(){try{alert('Đang kiểm tra cập nhật từ GitHub. Vui lòng xem Serial Monitor!');await api('/api/ota',{method:'POST'});}catch(e){showError(e)}}
 let clockBaseSeconds=null,clockBaseAt=0;
 function drawClock(){if(clockBaseSeconds===null){$('clock').textContent='Chưa có giờ';return}const n=(clockBaseSeconds+Math.floor((Date.now()-clockBaseAt)/1000))%86400;$('clock').textContent=`${String(Math.floor(n/3600)).padStart(2,'0')}:${String(Math.floor(n/60)%60).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
 async function refreshStatus(){try{const s=await api('/api/status');if(s.timeValid){const t=s.time.split(':').map(Number);clockBaseSeconds=t[0]*3600+t[1]*60+t[2];clockBaseAt=Date.now()}drawClock();$('wifiStatus').textContent=s.wifiConnected?`Đã kết nối: ${s.ssid} · ${s.ip}`:`Chưa kết nối Wi‑Fi · AP: 192.168.4.1`;let card=s.playerReady?`DFPlayer sẵn sàng · ${s.trackCount} file · ${s.playing?'đang phát':'đã dừng'}`:'Chưa giao tiếp DFPlayer. Kiểm tra nguồn, dây UART, GND, thẻ SD.';if(s.currentTrack)card+=` · bài ${s.currentTrack}`;if(s.lastDfError===6)card+=' · lỗi 6: không tìm thấy file';else if(s.lastDfError)card+=` · lỗi DFPlayer ${s.lastDfError}`;if(s.rootPlayback)card+=' · đang phát theo số thứ tự gốc thẻ';$('cardNote').textContent=card;renderAlarms(s.alarms||[])}catch(e){console.error(e)}}
-function renderAlarms(alarms){const html=alarms.length?alarms.map((a,i)=>`<div class="alarm-item"><div><input type="checkbox" ${a.enabled?'checked':''} onchange="toggleAlarm(${i})"><span class="alarm-time">${String(a.hour).padStart(2,'0')}:${String(a.minute).padStart(2,'0')}</span></div><div class="alarm-meta">Chọn bài ngẫu nhiên · âm lượng ${a.volume} · phát trong ${a.durationMin} phút</div><button class="secondary" onclick="editAlarm(${i})">Sửa</button> <button class="danger" onclick="deleteAlarm(${i})">Xóa</button></div>`).join(''):'<p class="note">Chưa có báo thức nào. Thêm báo thức mới.</p>';$('alarmsList').innerHTML=html}
+function renderAlarms(alarms){const html=alarms.length?alarms.map((a,i)=>`<div class="alarm-item"><div><input type="checkbox" ${a.enabled?'checked':''} onchange="toggleAlarm(${i})"><span class="alarm-time">${String(a.hour).padStart(2,'0')}:${String(a.minute).padStart(2,'0')}</span></div><div class="alarm-meta">Chọn bài ngẫu nhiên · âm lượng ${a.volume} · phát trong ${a.durationSec} giây</div><button class="secondary" onclick="editAlarm(${i})">Sửa</button> <button class="danger" onclick="deleteAlarm(${i})">Xóa</button></div>`).join(''):'<p class="note">Chưa có báo thức nào. Thêm báo thức mới.</p>';$('alarmsList').innerHTML=html}
 let editingId=-1;
-function cancelEdit(){editingId=-1;$('hour').value=8;$('minute').value=0;$('duration').value=1;$('volume').value=20;$('saveAlarmButton').textContent='Thêm báo thức'}
+function cancelEdit(){editingId=-1;$('hour').value=8;$('minute').value=0;$('duration').value=60;$('volume').value=20;$('saveAlarmButton').textContent='Thêm báo thức'}
 async function load(){try{const s=await api('/api/status');cancelEdit();const select=$('track');select.innerHTML='';for(let i=1;i<=s.trackCount;i++){const o=document.createElement('option');o.value=i;o.textContent=`Bài ${i}`;select.appendChild(o)}if(!s.trackCount){const o=document.createElement('option');o.value=1;o.textContent='Chưa đọc được danh sách bài';select.appendChild(o)}await refreshStatus()}catch(e){showError(e)}}
-async function saveAlarm(){const wasEditing=editingId>=0;try{const body={id:editingId,hour:+$('hour').value,minute:+$('minute').value,durationMin:+$('duration').value,volume:+$('volume').value,enabled:true};await api('/api/alarm',{method:'POST',body:JSON.stringify(body)});await load();alert(wasEditing?'Đã cập nhật báo thức':'Đã thêm báo thức')}catch(e){showError(e)}}
-async function editAlarm(id){try{const s=await api('/api/status');const a=s.alarms[id];if(!a)return;editingId=id;$('hour').value=a.hour;$('minute').value=a.minute;$('duration').value=a.durationMin;$('volume').value=a.volume;$('saveAlarmButton').textContent='Lưu thay đổi';window.scrollTo({top:0,behavior:'smooth'})}catch(e){showError(e)}}
+async function saveAlarm(){const wasEditing=editingId>=0;try{const body={id:editingId,hour:+$('hour').value,minute:+$('minute').value,durationSec:+$('duration').value,volume:+$('volume').value,enabled:true};await api('/api/alarm',{method:'POST',body:JSON.stringify(body)});await load();alert(wasEditing?'Đã cập nhật báo thức':'Đã thêm báo thức')}catch(e){showError(e)}}
+async function editAlarm(id){try{const s=await api('/api/status');const a=s.alarms[id];if(!a)return;editingId=id;$('hour').value=a.hour;$('minute').value=a.minute;$('duration').value=a.durationSec;$('volume').value=a.volume;$('saveAlarmButton').textContent='Lưu thay đổi';window.scrollTo({top:0,behavior:'smooth'})}catch(e){showError(e)}}
 async function deleteAlarm(id){if(!confirm('Xóa báo thức này?'))return;try{await api('/api/alarm/delete',{method:'POST',body:JSON.stringify({id})});await load()}catch(e){showError(e)}}
-async function toggleAlarm(id){try{const s=await api('/api/status');const a=s.alarms[id];if(!a)return;await api('/api/alarm',{method:'POST',body:JSON.stringify({id,hour:a.hour,minute:a.minute,durationMin:a.durationMin,volume:a.volume,enabled:!a.enabled})});await refreshStatus()}catch(e){showError(e)}}
+async function toggleAlarm(id){try{const s=await api('/api/status');const a=s.alarms[id];if(!a)return;await api('/api/alarm',{method:'POST',body:JSON.stringify({id,hour:a.hour,minute:a.minute,durationSec:a.durationSec,volume:a.volume,enabled:!a.enabled})});await refreshStatus()}catch(e){showError(e)}}
 async function testTrack(){try{await api('/api/play',{method:'POST',body:JSON.stringify({track:+$('track').value,volume:+$('volume').value})});await load()}catch(e){showError(e)}}
 async function stopAudio(){try{await api('/api/stop',{method:'POST'});await load()}catch(e){showError(e)}}
 async function saveWifi(){try{await fetch('/api/wifi',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({ssid:$('ssid').value,password:$('password').value})}).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error)});alert('Đã lưu Wi‑Fi. ESP32 đang kết nối lại.');setTimeout(load,3000)}catch(e){showError(e)}}
@@ -102,7 +101,7 @@ void saveConfig() {
     preferences.putBool((prefix + "en").c_str(), alarmConfigs[i].enabled);
     preferences.putUChar((prefix + "h").c_str(), alarmConfigs[i].hour);
     preferences.putUChar((prefix + "m").c_str(), alarmConfigs[i].minute);
-    preferences.putUShort((prefix + "dur").c_str(), alarmConfigs[i].durationMin);
+    preferences.putUShort((prefix + "durs").c_str(), alarmConfigs[i].durationSec);
     preferences.putUChar((prefix + "vol").c_str(), alarmConfigs[i].volume);
   }
   preferences.end();
@@ -118,7 +117,15 @@ void loadConfig() {
     alarmConfigs[i].enabled = preferences.getBool((prefix + "en").c_str(), false);
     alarmConfigs[i].hour = preferences.getUChar((prefix + "h").c_str(), 8);
     alarmConfigs[i].minute = preferences.getUChar((prefix + "m").c_str(), 30);
-    alarmConfigs[i].durationMin = preferences.getUShort((prefix + "dur").c_str(), DEFAULT_DURATION_MIN);
+    if (preferences.isKey((prefix + "durs").c_str())) {
+      alarmConfigs[i].durationSec = preferences.getUShort((prefix + "durs").c_str(), DEFAULT_DURATION_SEC);
+    } else if (preferences.isKey((prefix + "dur").c_str())) {
+      // Dữ liệu cũ lưu theo phút -> đổi sang giây
+      uint32_t sec = (uint32_t)preferences.getUShort((prefix + "dur").c_str(), 1) * 60UL;
+      alarmConfigs[i].durationSec = sec > MAX_DURATION_SEC ? MAX_DURATION_SEC : sec;
+    } else {
+      alarmConfigs[i].durationSec = DEFAULT_DURATION_SEC;
+    }
     alarmConfigs[i].volume = preferences.getUChar((prefix + "vol").c_str(), DEFAULT_VOLUME);
   }
   wifiSsid = preferences.getString("ssid", "");
@@ -232,7 +239,7 @@ void handleStatus() {
     if (i > 0) json += ",";
     json += "{\"id\":" + String(i) + ",\"enabled\":" + String(alarmConfigs[i].enabled ? "true" : "false") +
       ",\"hour\":" + String(alarmConfigs[i].hour) + ",\"minute\":" + String(alarmConfigs[i].minute) +
-      ",\"durationMin\":" + String(alarmConfigs[i].durationMin) +
+      ",\"durationSec\":" + String(alarmConfigs[i].durationSec) +
       ",\"volume\":" + String(alarmConfigs[i].volume) + "}";
   }
   json += "]}";
@@ -255,9 +262,9 @@ void handleSaveAlarm() {
   int id = number("id", -1);
   bool enabled = body.indexOf("\"enabled\":true") >= 0;
   int h = number("hour", -1), m = number("minute", -1);
-  int d = number("durationMin", -1), vol = number("volume", -1);
+  int d = number("durationSec", -1), vol = number("volume", -1);
   
-  if (h < 0 || h > 23 || m < 0 || m > 59 || d < 1 || d > MAX_DURATION_MIN || trackCount == 0 || vol < 0 || vol > 30) {
+  if (h < 0 || h > 23 || m < 0 || m > 59 || d < 1 || d > MAX_DURATION_SEC || trackCount == 0 || vol < 0 || vol > 30) {
     sendError(400, "Giá trị giờ, phút, thời lượng hoặc âm lượng không hợp lệ; cần có file trên thẻ SD");
     return;
   }
@@ -266,14 +273,14 @@ void handleSaveAlarm() {
     // Update existing alarm
     alarmConfigs[id].hour = h;
     alarmConfigs[id].minute = m;
-    alarmConfigs[id].durationMin = d;
+    alarmConfigs[id].durationSec = d;
     alarmConfigs[id].volume = vol;
     alarmConfigs[id].enabled = enabled;
   } else if (id == -1 && alarmCount < MAX_ALARMS) {
     // Add new alarm
     alarmConfigs[alarmCount].hour = h;
     alarmConfigs[alarmCount].minute = m;
-    alarmConfigs[alarmCount].durationMin = d;
+    alarmConfigs[alarmCount].durationSec = d;
     alarmConfigs[alarmCount].volume = vol;
     alarmConfigs[alarmCount].enabled = enabled;
     alarmCount++;
@@ -355,7 +362,7 @@ void startAlarm(uint8_t idx) {
   uint16_t track = chooseRandomTrack();
   if (!playTrack(track, alarmConfigs[idx].volume)) return;
   alarmStartedAt = millis();
-  alarmDurationMs = (uint32_t)alarmConfigs[idx].durationMin * 60000UL;
+  alarmDurationMs = (uint32_t)alarmConfigs[idx].durationSec * 1000UL;
   alarmSessionActive = true;
   activeAlarmVolume = alarmConfigs[idx].volume;
   Serial.printf("Bao thuc %u: %02u:%02u, ngau nhien bai %u\n", idx, alarmConfigs[idx].hour, alarmConfigs[idx].minute, track);

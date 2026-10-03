@@ -18,7 +18,8 @@ void GithubOTA::checkAndUpdate(const String& versionUrl, const String& firmwareU
     Serial.println("OTA: Đang kiểm tra phiên bản mới từ GitHub...");
     
     // 1. Kiểm tra version
-    http.begin(client, versionUrl);
+    // Thêm tham số thời gian để tránh bị cache version.txt cũ
+    http.begin(client, versionUrl + "?t=" + String(millis()));
     if (githubToken.length() > 0) {
         http.addHeader("Authorization", "token " + githubToken);
     }
@@ -71,4 +72,3 @@ void GithubOTA::checkAndUpdate(const String& versionUrl, const String& firmwareU
     
     http.end();
 }
-

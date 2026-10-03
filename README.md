@@ -37,7 +37,7 @@ ESP32 GND ------------------ GND ------------ GND
 
 1. Mở trang web của ESP32 bằng trình duyệt trên điện thoại.
 2. Chọn **Giờ** và **Phút** theo giờ địa phương Việt Nam.
-3. Chọn **Thời lượng** từ 1 đến 120 phút và **Âm lượng** từ 0 đến 30. Mỗi lần chuông bắt đầu, ESP32 chọn ngẫu nhiên một bài; khi hết bài, nó chọn bài ngẫu nhiên tiếp theo cho đến hết thời lượng.
+3. Chọn **Thời lượng** từ 1 đến 7200 giây (tối đa 2 giờ) và **Âm lượng** từ 0 đến 30. Mỗi lần chuông bắt đầu, ESP32 chọn ngẫu nhiên một bài; khi hết bài, nó chọn bài ngẫu nhiên tiếp theo cho đến hết thời lượng.
 4. Nhấn **Thêm báo thức**. Có thể tạo tối đa 10 báo thức hằng ngày; mỗi mục có công tắc bật/tắt, nút sửa và nút xóa.
 
 Thiết lập được lưu trong ESP32 nên không cần mở điện thoại hoặc giữ trang web hoạt động. Báo thức lặp lại mỗi ngày. ESP32 cần kết nối Wi-Fi có Internet để đồng bộ giờ NTP sau khi khởi động; kiểm tra trạng thái giờ trên đầu trang trước khi tin cậy báo thức.
